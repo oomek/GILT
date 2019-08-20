@@ -1,2 +1,2 @@
 # GILT
-Game Input Lag Tester
+Game Input Lag Tester - Supplementary Software

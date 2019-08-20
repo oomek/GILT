@@ -1,0 +1,1 @@
+Place this folder inside plugins folder in mame and enable it in plugin.ini

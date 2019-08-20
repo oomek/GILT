@@ -1,0 +1,10 @@
+{
+  "plugin": {
+	"name": "inputlag",
+	"description": "Input lag test for G.I.L.T.",
+	"version": "1.0.0",
+	"author": "Radek Dutkiewicz",
+	"type": "plugin",
+	"start": "false"
+  }
+}

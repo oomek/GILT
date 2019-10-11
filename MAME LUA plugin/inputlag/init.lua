@@ -13,7 +13,8 @@ local inputlag_settings = {
 	enabled_box = false,
 	enabled_bar = false,
 	ratio_idx = 0,
-	disp_inch = 21
+	disp_inch = 21,
+	mode_idx = 0
 }
 
 function inputlag.set_folder(path)
@@ -21,11 +22,43 @@ function inputlag.set_folder(path)
 end
 
 function inputlag.startplugin()
+	local KEY_GREEN =		"KEYCODE_0PAD"
+	local KEY_BLACK =		"KEYCODE_1PAD"
+	local KEY_GRAY =		"KEYCODE_2PAD"
+	local KEY_WHITE =		"KEYCODE_3PAD" --temp
+	local KEY_MODE_LCD =	"KEYCODE_4PAD"
+	local KEY_MODE_CRT =	"KEYCODE_5PAD"
+	local KEY_STROBE =		"KEYCODE_6PAD" --temp
+
+	local COLOR_WHITE =		0xffffffff
+	local COLOR_GRAY =		0xff808080
+	local COLOR_BLACK =		0xff000000
+	local COLOR_GREEN =		0xff64ff64
+	local COLOR_TRANSP =	0x00000000
+
+	local box_color_off = COLOR_BLACK
+	local box_color = COLOR_BLACK
+
 	local enabled_box = true
 	local enabled_bar = true
-	local ratio = {"4:3", "16:10", "16:9", "21:9"}
-	local ratio_f = { 1.333333, 1.6, 1.777778, 2.333333 }
+
+	local ratio = {}
+	local ratio_f = {}
 	local ratio_idx = 0
+	ratio[0] = "4:3"
+	ratio[1] = "16:10"
+	ratio[2] = "16:9"
+	ratio[3] = "21:9"
+	ratio_f[0] = 1.333333
+	ratio_f[1] = 1.6
+	ratio_f[2] = 1.777778
+	ratio_f[3] = 2.333333
+
+	local mode = {}
+	local mode_idx = 0
+	mode[0] = "Input Lag"
+	mode[1] = "Perceived Lag"
+
 	local scr = {}
 	local inp = {}
 	local tar = {}
@@ -35,17 +68,26 @@ function inputlag.startplugin()
 	local registered = false
 	local disp_inch = 27
 	local disp_height = 0
-	
+
 	local sensor_width_mm = 50
 	local sensor_height_mm = 75
 
 	local sensor_width = 0
 	local sensor_height = 0
-	
+	local sensor_y = 0
+
+	local fix_width = 0;
+	local fix_height = 0;
+
 	local bar_x = 0
-	local blink = 0
+	local strobe = 0
+	local blink_counter = 0
+	local blink_debug = 0
+	local blink_mode = false
+	local display_crt = false
+
 	local json = require('json')
-	
+
 	local function save_settings()
 		local file = io.open(inputlag_folder .. '/settings.cfg', 'w')
 		if file then
@@ -67,22 +109,86 @@ function inputlag.startplugin()
 
 	local function draw_elements()
 		if inputlag_settings.enabled_box then
-			scr:draw_box(0, 0, sensor_width, sensor_height, 0xff000000, 0)
-			pressed = inp:code_pressed(inp:code_from_token("KEYCODE_LEFT"))
-			if pressed then
-				scr:draw_box(0, 0, sensor_width, sensor_height / 4, 0xffffffff, 0)
-			end
-			if inp:code_pressed(inp:code_from_token("KEYCODE_RIGHT")) then
-				if blink == 0 then
-					scr:draw_box(0, 0, sensor_width, sensor_height / 4, 0xffffffff, 0)
+
+			box_color = box_color_off
+
+			if inp:code_pressed(inp:code_from_token(KEY_MODE_LCD)) then
+				if blink_mode == false then
+					blink_counter = 0
+					blink_mode = true
+					display_crt = false
 				end
-				blink = blink + 1
-				if blink > 4 then blink = 0 end
+				if blink_counter < 32 then
+					if blink_counter / 4.0 % 4.0 < inputlag_settings.mode_idx + 2 and blink_counter % 4.0 < 2.0 then
+						box_color = COLOR_WHITE
+						blink_debug = blink_debug + 1
+					else
+						box_color = box_color_off
+					end
+					blink_counter = blink_counter + 1
+				end
+
+			elseif inp:code_pressed(inp:code_from_token(KEY_MODE_CRT)) then
+				if blink_mode == false then
+					blink_counter = 0
+					blink_mode = true
+					display_crt = true
+				end
+				if blink_counter < 8 then
+					if (blink_counter % 4.0) <= (inputlag_settings.mode_idx) then
+						box_color = COLOR_WHITE
+						blink_debug = blink_debug + 1
+					else
+						box_color = box_color_off
+					end
+					blink_counter = blink_counter + 1
+				end
+
+			elseif inp:code_pressed(inp:code_from_token(KEY_BLACK)) then
+				box_color_off = COLOR_BLACK
+				box_color = box_color_off
+
+			elseif inp:code_pressed(inp:code_from_token(KEY_GRAY)) then
+				box_color_off = COLOR_GRAY
+				box_color = box_color_off
+
+			elseif inp:code_pressed(inp:code_from_token(KEY_GREEN)) then
+				box_color_off = COLOR_GREEN
+				box_color = box_color_off
+
+			elseif inp:code_pressed(inp:code_from_token(KEY_WHITE)) then
+				box_color = COLOR_WHITE
+
+			elseif inp:code_pressed(inp:code_from_token(KEY_STROBE)) then
+				if strobe < 2 then
+					box_color = COLOR_WHITE
+				else
+					box_color = box_color_off
+				end
+				strobe = strobe + 1
+				if strobe > 3 then
+					strobe = 0
+				end
+			elseif blink_mode == true then
+				blink_mode = false
+				blink_debug = 0
 			end
+
+
+			--scr:draw_text(50, 0, "blink_counter " .. blink_counter);
+			--scr:draw_text(50, 8, "blink_debug " .. blink_debug);
+			--scr:draw_text(50, 16, "mode_idx " .. inputlag_settings.mode_idx);
+
+			scr:draw_box(0, 0, sensor_width * 2, scr:height() + 10, COLOR_BLACK, 0)
+			scr:draw_box(0, 0, fix_width, fix_height, COLOR_WHITE, 0)
+			scr:draw_box(scr:width() - fix_width, 0, scr:width(), fix_height, COLOR_WHITE, 0)
+			scr:draw_box(scr:width() - fix_width, scr:height() - fix_height, scr:width(), scr:height(), COLOR_WHITE, 0)
+			scr:draw_box(0, scr:height() - fix_height, fix_width, scr:height(), COLOR_WHITE, 0)
+			scr:draw_box(0, sensor_y, sensor_width, sensor_y + sensor_height, box_color, 0)
 		end
-		
+
 		if inputlag_settings.enabled_bar then
-			scr:draw_box(bar_x, 0, bar_x + scr:width() / 64, scr:height(), 0xff80ff80, 0)
+			scr:draw_box(bar_x, 0, bar_x + scr:width() / 64, scr:height(), COLOR_GREEN, 0)
 			bar_x = bar_x + 1
 			if (bar_x > scr:width()) then
 				bar_x = scr:width() / 2
@@ -91,40 +197,55 @@ function inputlag.startplugin()
 	end
 
 	local function update_box_size()
-		disp_height = math.sqrt( inputlag_settings.disp_inch^2 / ((ratio_f[inputlag_settings.ratio_idx + 1])^2 + 1)) * 25.4
-		sensor_width = sensor_width_mm * scr:width() / disp_height / ratio_f[inputlag_settings.ratio_idx + 1]
+		box_color_off = COLOR_TRANSP
+		disp_height = math.sqrt( inputlag_settings.disp_inch^2 / ((ratio_f[inputlag_settings.ratio_idx])^2 + 1)) * 25.4
+		sensor_width = sensor_width_mm * scr:width() / disp_height / ratio_f[inputlag_settings.ratio_idx]
 		sensor_height = sensor_height_mm * scr:height() / disp_height
+		if inputlag_settings.mode_idx == 0 then
+			sensor_y = 0
+		else
+			sensor_y = scr:height() / 2.0 - sensor_height * 0.08666;
+		end
+		fix_width = sensor_width_mm * scr:width() / disp_height / ratio_f[inputlag_settings.ratio_idx]
+		fix_height = sensor_width_mm * scr:height() / disp_height
 	end
 
 	local function menu_populate()
 		local menu = {}
 		if inputlag_settings.enabled_box then
-			menu[1] = { "Enabled"   , "On", "l" }
+			menu[1] = { "Enabled", "On", "l" }
 		else
-			menu[1] = { "Enabled"   , "Off", "r" }
+			menu[1] = { "Enabled", "Off", "r" }
 		end
-		
-		if inputlag_settings.enabled_bar then
-			menu[2] = { "Tearing test", "On", "l" }
-		else
-			menu[2] = { "Tearing test", "Off", "r" }
+
+		if inputlag_settings.mode_idx == 0 then
+			menu[2] = { "Mode", mode[inputlag_settings.mode_idx], "r" }
+		elseif inputlag_settings.mode_idx == 1 then
+			menu[2] = { "Mode", mode[inputlag_settings.mode_idx], "l" }
 		end
 
 		if inputlag_settings.ratio_idx == 0 then
-			menu[3] = { "Display Ratio"   , ratio[inputlag_settings.ratio_idx + 1], "r" }
+			menu[3] = { "Display Ratio", ratio[inputlag_settings.ratio_idx], "r" }
 		elseif inputlag_settings.ratio_idx == 3 then
-			menu[3] = { "Display Ratio"   , ratio[inputlag_settings.ratio_idx + 1], "l" }
+			menu[3] = { "Display Ratio", ratio[inputlag_settings.ratio_idx], "l" }
 		else
-			menu[3] = { "Display Ratio"   , ratio[inputlag_settings.ratio_idx + 1], "lr" }
+			menu[3] = { "Display Ratio", ratio[inputlag_settings.ratio_idx], "lr" }
 		end
 
 		if inputlag_settings.disp_inch == 1 then
-			menu[4] = { "Display Size"   , inputlag_settings.disp_inch .. " inch", "r" }
+			menu[4] = { "Display Size", inputlag_settings.disp_inch .. " inch", "r" }
 		elseif inputlag_settings.disp_inch == 99 then
-			menu[4] = { "Display Size"   , inputlag_settings.disp_inch .. " inch", "l" }
+			menu[4] = { "Display Size", inputlag_settings.disp_inch .. " inch", "l" }
 		else
-			menu[4] = { "Display Size"   , inputlag_settings.disp_inch .. " inch", "lr" }
+			menu[4] = { "Display Size", inputlag_settings.disp_inch .. " inch", "lr" }
 		end
+
+		if inputlag_settings.enabled_bar then
+			menu[5] = { "Tearing test", "On", "l" }
+		else
+			menu[5] = { "Tearing test", "Off", "r" }
+		end
+
 		return menu
 	end
 
@@ -135,8 +256,16 @@ function inputlag.startplugin()
 		end
 
 		if index == 2 then
-			if event == "left" then inputlag_settings.enabled_bar = false end
-			if event == "right" then inputlag_settings.enabled_bar = true end
+			if event == "left" then
+				inputlag_settings.mode_idx = inputlag_settings.mode_idx - 1
+				if inputlag_settings.mode_idx < 0 then inputlag_settings.mode_idx = 0 end
+				update_box_size()
+			end
+			if event == "right" then
+				inputlag_settings.mode_idx = inputlag_settings.mode_idx + 1
+				if inputlag_settings.mode_idx > 1 then inputlag_settings.mode_idx = 1 end
+				update_box_size()
+			end
 		end
 
 		if index == 3 then
@@ -160,10 +289,16 @@ function inputlag.startplugin()
 			end
 			if event == "right" then
 				inputlag_settings.disp_inch = inputlag_settings.disp_inch + 1
-				if inputlag_settings.disp_inch > 99 then inputlag_settings.disp_inch = 99 end				
+				if inputlag_settings.disp_inch > 99 then inputlag_settings.disp_inch = 99 end
 				update_box_size()
 			end
 		end
+
+		if index == 5 then
+			if event == "left" then inputlag_settings.enabled_bar = false end
+			if event == "right" then inputlag_settings.enabled_bar = true end
+		end
+
 		return true
 	end
 
@@ -175,7 +310,7 @@ function inputlag.startplugin()
 			emu.register_frame_done(draw_elements)
 			tar = manager:machine():render():ui_target()
 			con = manager:machine():render():ui_container()
-			update_box_size()			
+			update_box_size()
 			bar_x = scr:width() / 2
 			emu.register_menu(menu_callback, menu_populate, "Input Lag Test for G.I.L.T.")
 			registered = true

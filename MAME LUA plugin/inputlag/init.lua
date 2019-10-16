@@ -82,7 +82,6 @@ function inputlag.startplugin()
 	local bar_x = 0
 	local strobe = 0
 	local blink_counter = 0
-	local blink_debug = 0
 	local blink_mode = false
 	local display_crt = false
 
@@ -114,34 +113,30 @@ function inputlag.startplugin()
 
 			if inp:code_pressed(inp:code_from_token(KEY_MODE_LCD)) then
 				if blink_mode == false then
-					blink_counter = 0
+					blink_counter = scr:frame_number()
 					blink_mode = true
 					display_crt = false
 				end
-				if blink_counter < 32 then
-					if blink_counter / 4.0 % 4.0 < inputlag_settings.mode_idx + 2 and blink_counter % 4.0 < 2.0 then
+				if (scr:frame_number() - blink_counter) < 32 then
+					if (scr:frame_number() - blink_counter) / 4.0 % 4.0 < inputlag_settings.mode_idx + 2 and (scr:frame_number() - blink_counter) % 4.0 < 2.0 then
 						box_color = COLOR_WHITE
-						blink_debug = blink_debug + 1
 					else
 						box_color = box_color_off
 					end
-					blink_counter = blink_counter + 1
 				end
 
 			elseif inp:code_pressed(inp:code_from_token(KEY_MODE_CRT)) then
 				if blink_mode == false then
-					blink_counter = 0
+					blink_counter = scr:frame_number()
 					blink_mode = true
 					display_crt = true
 				end
-				if blink_counter < 8 then
-					if (blink_counter % 4.0) <= (inputlag_settings.mode_idx) then
+				if (scr:frame_number() - blink_counter) < 8 then
+					if ((scr:frame_number() - blink_counter) % 4.0) <= (inputlag_settings.mode_idx) then
 						box_color = COLOR_WHITE
-						blink_debug = blink_debug + 1
 					else
 						box_color = box_color_off
 					end
-					blink_counter = blink_counter + 1
 				end
 
 			elseif inp:code_pressed(inp:code_from_token(KEY_BLACK)) then

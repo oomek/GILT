@@ -160,24 +160,16 @@ function inputlag.startplugin()
 				box_color = COLOR_WHITE
 
 			elseif inp:code_pressed(inp:code_from_token(KEY_STROBE)) then
-				if strobe < 2 then
+				if scr:frame_number() % 4 / 2 == 0 then
 					box_color = COLOR_WHITE
 				else
 					box_color = box_color_off
 				end
-				strobe = strobe + 1
-				if strobe > 3 then
-					strobe = 0
-				end
+
 			elseif blink_mode == true then
 				blink_mode = false
 				blink_debug = 0
 			end
-
-
-			--scr:draw_text(50, 0, "blink_counter " .. blink_counter);
-			--scr:draw_text(50, 8, "blink_debug " .. blink_debug);
-			--scr:draw_text(50, 16, "mode_idx " .. inputlag_settings.mode_idx);
 
 			scr:draw_box(0, 0, sensor_width * 2, scr:height() + 10, COLOR_BLACK, 0)
 			scr:draw_box(0, 0, fix_width, fix_height, COLOR_WHITE, 0)

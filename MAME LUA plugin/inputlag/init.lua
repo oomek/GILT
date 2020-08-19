@@ -2,7 +2,7 @@
 -- copyright-holders:Radek Dutkiewicz
 local exports = {}
 exports.name = "inputlag"
-exports.version = "1.0.0"
+exports.version = "1.1.0"
 exports.description = "Input Lag Test for G.I.L.T."
 exports.license = "The BSD 3-Clause License"
 exports.author = { name = "Radek Dutkiewicz" }
@@ -292,7 +292,8 @@ function inputlag.startplugin()
 	emu.register_start(function()
 		if not registered then
 			load_settings()
-			scr = manager:machine().screens[":screen"]
+			local k
+			k, scr = next(manager:machine().screens)
 			inp = manager:machine():input()
 			emu.register_frame_done(draw_elements)
 			tar = manager:machine():render():ui_target()

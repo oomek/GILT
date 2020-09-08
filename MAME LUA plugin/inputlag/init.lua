@@ -2,7 +2,7 @@
 -- copyright-holders:Radek Dutkiewicz
 local exports = {}
 exports.name = "inputlag"
-exports.version = "1.1.0"
+exports.version = "1.1.1"
 exports.description = "Input Lag Test for G.I.L.T."
 exports.license = "The BSD 3-Clause License"
 exports.author = { name = "Radek Dutkiewicz" }
@@ -65,7 +65,6 @@ function inputlag.startplugin()
 	local con = {}
 	local pressed = false
 	local state = false
-	local registered = false
 	local disp_inch = 27
 	local disp_height = 0
 
@@ -289,23 +288,21 @@ function inputlag.startplugin()
 		return true
 	end
 
-	emu.register_start(function()
-		if not registered then
-			load_settings()
-			local k
-			k, scr = next(manager:machine().screens)
-			inp = manager:machine():input()
-			emu.register_frame_done(draw_elements)
-			tar = manager:machine():render():ui_target()
-			con = manager:machine():render():ui_container()
-			update_box_size()
-			bar_x = scr:width() / 2
-			emu.register_menu(menu_callback, menu_populate, "Input Lag Test for G.I.L.T.")
-			registered = true
-		end
-	end)
+	local function start_init()
+		load_settings()
+		local k
+		k, scr = next(manager:machine().screens)
+		inp = manager:machine():input()
+		tar = manager:machine():render():ui_target()
+		con = manager:machine():render():ui_container()
+		update_box_size()
+		bar_x = scr:width() / 2
+	end
 
+	emu.register_start(start_init)
 	emu.register_stop(save_settings)
+	emu.register_frame_done(draw_elements)
+	emu.register_menu(menu_callback, menu_populate, "Input Lag Test for G.I.L.T.")
 end
 
 return exports
